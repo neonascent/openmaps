@@ -1,0 +1,10 @@
+#!/bin/bash
+destfile=/var/log/dhcp_leases
+#if [ "$1" == "add" ]
+#then 
+  if [ -f "$destfile" ]
+  then
+    echo "$1 $2" >> "$destfile" 
+  fi
+#fi
+
