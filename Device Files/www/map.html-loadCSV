@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"> 
+<html>
+<head>
+	<title>Ringstrasse - Martin Auer</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<link rel="stylesheet" href="/js/leaflet/leaflet.css" />
+	<script type="text/javascript" src="/js/leaflet/leaflet.js"></script>
+
+	<style>
+		body {
+			padding: 0;
+			margin: 0;
+		}
+		html, body, #map {
+			height: 100%;
+		}
+
+		#loading {
+			position:fixed;
+			top:0;
+			left:0;
+			width:100%;
+			height:100%;
+			background-color:#666;
+			color:#fff;
+			font-size:2em;
+			padding:20% 40%;
+			z-index:10;
+		}
+	</style>
+</head>
+<body>
+	<div id="map"></div>
+    <div id="loading">Loading...</div> <!-- Displayed while CSV is loading -->
+    
+	<!-- GeoCSV -->
+	<script src="/js/leaflet.geocsv.js"></script>
+
+	<!-- jQuery 1.8.3: http://jquery.com/ -->
+	<script src="/js/jquery.min.js"></script>
+
+
+	<script>
+		var map = L.map('map', {
+                attributionControl:'Martin Auer'} // attribution for the map
+            ).setView(
+                [48.203337,16.358617], // center of the map when it appears
+                16 // the starting zoom level
+            );
+
+        // add base map tiles
+		L.tileLayer('./maptiles/{z}/{x}/{y}.png', {
+		    maxZoom: 19,
+            minZoom:16, // set to your highest zoom maptile level
+            maxNativeZoom:18, // set to your lowest zoom maptile level
+		    attribution: 'Martin Auer' // attribution for the layer
+		}).addTo(map);
+        
+        // lets load some csv with AJAX!
+        // Start with how to process each CSV row 
+        var points = L.geoCsv(null, {
+			onEachFeature: function (feature, layer) {
+					var popupContent = "";
+		
+					if (feature.properties && feature.properties.id) {
+						popupContent += "<img src=\"./stickers/images/" + feature.properties.id + ".png\" style=\" position:absolute; top: -305px; left: -75px;\" height=300 width=300/>";
+					}
+
+					if (feature.properties && feature.properties.time && feature.properties.date) {
+						popupContent += "<p>" + feature.properties.time + " "+feature.properties.date+"</p>";
+                    }
+					layer.bindPopup(popupContent);
+			},
+			pointToLayer: function (feature, latlng) {
+				
+				var fColor = "#ff7800";	
+				if (feature.properties && feature.properties.fillcolor) {
+					fColor = "#"+feature.properties.fillcolor;
+				} 
+
+				return L.circleMarker(latlng, {
+					radius: 8,
+					fillColor: fColor,
+					color: "#000",
+					weight: 1,
+					opacity: 1,
+					fillOpacity: 0.8
+				});
+			},
+			firstLineTitles: true,
+			fieldSeparator: ';'
+		});
+        
+        // now load AJAX 
+        $.ajax ({
+			type:'GET',
+			dataType:'text',
+			url:'./points.csv',
+		   error: function() {
+		     alert('Cant find the data');
+		   },
+			success: function(csv) {
+				points.addData(csv);
+				map.addLayer(points);
+
+			},
+		   complete: function() {
+		      $('#loading').delay(500).fadeOut('slow');
+		   }
+		});
+        
+        
+        
+    
+        /* 
+        TOOLS 
+        */
+        
+        /*      Log to console lat/long and tile information when area is clicked */
+        map.on('click', function(e) {
+                console.log("Lat, Lon : " + e.latlng.lat + ", " + e.latlng.lng);
+                console.log(getSlippyTileLayerPoints(e.latlng.lat, e.latlng.lng, map.getZoom()));
+        });
+        
+        var getSlippyTileLayerPoints = function (lat_deg, lng_deg, zoom) {
+            var x = (Math.floor((lng_deg + 180) / 360 * Math.pow(2, zoom)));
+            var y = (Math.floor((1 - Math.log(Math.tan(lat_deg * Math.PI / 180) + 1 / Math.cos(lat_deg * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom)));
+
+            var layerPoint = {
+                x: x,
+                y: y
+            };
+
+            return layerPoint;
+        };
+    
+	</script>
+</body>
+</html>
